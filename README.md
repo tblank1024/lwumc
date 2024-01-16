@@ -55,4 +55,4 @@ the system isn't in a secure location like disabling any unsed ports.
 The the system does not have a keyboard or mouse. VNC provides remote access when/if changes need to be made.  However, 
 typical operation should not require any changes since only the 7 pages with daily announcements need to be modified; the urls
 shouldn't be changed. Finally, I discovered that xrdp and the windows "remote desktop" didn't work properly; 
-only RealVNC desktop worked.
+only RealVNC desktop worked with both a remote display and a display directly connected to the Pi.
