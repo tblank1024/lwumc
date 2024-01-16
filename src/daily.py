@@ -4,9 +4,7 @@
 # The program is run on a Raspberry Pi 4B with connected to a TV monitor
 # Systemd starts the program at boot time
 
-
-import os
-print("DISPLAY:", os.environ.get('DISPLAY', 'Not Set'))
+# Import the required libraries
 import webbrowser
 import pyautogui
 from datetime import datetime
@@ -78,10 +76,10 @@ def CalculateSleepTime():
     return sleep_time
 
 #main 
-# - Daily calls DisplayURL every 6 hours starting at 6AM
+# - Calls DisplayURL every 6 hours at 6AM, 12PM, 6PM, 12AM
+# - runs forever
 def Main():
     global day_of_week, hour_of_day, minute_of_hour, URLS
-    SIXHOURS = 21600    #seconds
     
     while True:
         Timing()
