@@ -22,7 +22,7 @@ The following provides the steps to get the system working:
 ## systemd service Setup
 1. Create file: /etc/systemd/system/announcments.service
 2. Code for file:
-...
+```
 [Unit]
 Description=Python Program using Chromium to display daily announements/schedule items
 
@@ -34,7 +34,7 @@ Environment=DISPLAY=:0
 
 [Install]
 WantedBy=multi-user.target
-...
+```
 
 3. Modify the ExecStart line to point to the location of the daily.py file
 4. Modify the User line to the name of the user you want to run the code
