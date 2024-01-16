@@ -15,11 +15,11 @@ The following provides the steps to get the system working:
 3. In cmd window: cd to location where you'd like the code to live
 4. In cmd window: git clone https://github.com/tblank1024/lwumc.git
 5. In cmd window: python -m pip install -r requirements.txt5. 
-6. Using rasp-config in system section:
-- insure that both boot to desktop
-- auto login are selected
-- (optional) VNC is enabled
-8. Modify daily.py code to point at your 7 urls, one for each day8. 
+6. Using rasp-config:
+- select boot to desktop
+- select autologin
+- (optional) VNC is enabled (see maintenance section)
+8. Modify daily.py code to point at your 7 urls, one for each day. 
 9. Create and start a systemd service to run the code (see systemd section for steps)
 10. Reboot system and the program should start
 
