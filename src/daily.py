@@ -3,6 +3,8 @@
 # - The calendar is displayed in full screen mode
 # The program is run on a Raspberry Pi 4B with connected to a TV monitor
 # Systemd starts the program at boot time
+#
+# Source maintained at: https://github.com/tblank1024/lwumc.git
 
 # Import the required libraries
 import webbrowser
@@ -30,6 +32,7 @@ def DisplayURL(url,Sleeping_sec):
     browser = webbrowser.get()
 
     # Open the URL with the specified browser and parameters
+    # the --app= prevents the "restore pages" dialog from appearing
     browser.open("--app=" + url)
 
     # Wait for a short time to ensure the browser tab is fully loaded
