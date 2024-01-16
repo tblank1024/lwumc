@@ -38,5 +38,5 @@ WantedBy=multi-user.target
 
 3. Modify the ExecStart line to point to the location of the daily.py file
 4. Modify the User line to the name of the user you want to run the code
-5. In cmd window: sudo systemctl enable annoouncements.service
-6. In cmd window: sudo systemctl start announcements.service
+5. In cmd window: sudo systemctl enable announcements.service
+6. In cmd window: sudo systemctl start  announcements.service
