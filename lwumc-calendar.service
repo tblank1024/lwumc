@@ -1,0 +1,20 @@
+[Unit]
+Description=Lake Washington United Methodist Church (LWUMC) Daily Calendar Display
+After=graphical.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=lwumcroot
+Environment="DISPLAY=:0"
+Environment="XAUTHORITY=/home/lwumcroot/.Xauthority"
+WorkingDirectory=/home/lwumcroot/code/tblank1024/lwumc/src
+ExecStartPre=/bin/sleep 10
+ExecStart=/usr/bin/python3 /home/lwumcroot/code/tblank1024/lwumc/src/daily.py
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=graphical.target

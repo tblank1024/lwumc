@@ -7,9 +7,11 @@
 # Source maintained at: https://github.com/tblank1024/lwumc.git
 
 # Import the required libraries
-import webbrowser
-import pyautogui
+import subprocess
+import time
 from datetime import datetime
+import signal
+import os
 
 #Constants
 URLS =     ["https://lakewaumc.org/event-calendar-page-monday/",
@@ -24,26 +26,93 @@ URLS =     ["https://lakewaumc.org/event-calendar-page-monday/",
 day_of_week = 0
 hour_of_day = 0
 minute_of_hour = 0
+debug = 0
+test_mode = 0  # Set to 1 to quickly test all 7 days
+chrome_process = None
 
-def DisplayURL(url,Sleeping_sec):
-    global day_of_week, hour_of_day, minute_of_hour
-
-    # Get the default browser controller 
-    browser = webbrowser.get()
-
-    # Open the URL with the specified browser and parameters
-    # the --app= prevents the "restore pages" dialog from appearing
-    browser.open("--app=" + url)
-
-    # Wait for a short time to ensure the browser tab is fully loaded
-    pyautogui.sleep(5)
-
-    # Simulate pressing F11 to go full screen
-    pyautogui.hotkey('F11')
-    pyautogui.sleep(Sleeping_sec)       #seconds sleep
-
-    # Simulate pressing Ctrl-W to close the tab
-    pyautogui.hotkey('ctrl', 'w')  #close tab   
+def DisplayURL(url, Sleeping_sec):
+    global chrome_process
+    
+    try:
+        print(f"Displaying URL: {url} for {Sleeping_sec} seconds")
+        
+        # Chrome/Chromium command with kiosk mode flags for Raspberry Pi
+        # These flags ensure proper full-screen display
+        chrome_cmd = [
+            'chromium-browser',
+            '--kiosk',
+            '--start-fullscreen',
+            '--start-maximized',
+            '--noerrdialogs',
+            '--disable-infobars',
+            '--disable-session-crashed-bubble',
+            '--disable-translate',
+            '--disable-features=TranslateUI',
+            '--disable-save-password-bubble',
+            '--no-first-run',
+            '--disable-popup-blocking',
+            '--disable-default-apps',
+            '--disable-extensions',
+            '--autoplay-policy=no-user-gesture-required',
+            '--window-position=0,0',
+            '--window-size=1920,1080',
+            '--incognito',
+            url
+        ]
+        
+        # Set DISPLAY environment variable if not set (for systemd service)
+        env = os.environ.copy()
+        if 'DISPLAY' not in env:
+            env['DISPLAY'] = ':0'
+        
+        # Launch Chrome in kiosk mode with proper environment
+        chrome_process = subprocess.Popen(chrome_cmd, env=env, 
+                                         stdout=subprocess.DEVNULL, 
+                                         stderr=subprocess.DEVNULL)
+        print(f"Chrome launched with PID: {chrome_process.pid}")
+        
+        # Give Chrome time to fully launch and go fullscreen
+        time.sleep(3)
+        
+        # Keep the webpage displayed for the specified time
+        time.sleep(Sleeping_sec)
+        
+        # Close Chrome process
+        if chrome_process and chrome_process.poll() is None:
+            print("Closing Chrome...")
+            chrome_process.terminate()
+            time.sleep(2)
+            
+            # Force kill if still running
+            if chrome_process.poll() is None:
+                chrome_process.kill()
+            chrome_process.wait()
+            
+    except FileNotFoundError:
+        print("Error: Chrome/Chromium browser not found. Trying alternative...")
+        try:
+            # Try google-chrome as alternative
+            chrome_cmd[0] = 'google-chrome'
+            env = os.environ.copy()
+            if 'DISPLAY' not in env:
+                env['DISPLAY'] = ':0'
+            chrome_process = subprocess.Popen(chrome_cmd, env=env,
+                                             stdout=subprocess.DEVNULL,
+                                             stderr=subprocess.DEVNULL)
+            time.sleep(3)
+            time.sleep(Sleeping_sec)
+            if chrome_process and chrome_process.poll() is None:
+                chrome_process.terminate()
+                chrome_process.wait()
+        except Exception as e:
+            print(f"Error: Could not launch Chrome. {e}")
+            print("Please ensure chromium-browser or google-chrome is installed")
+    except Exception as e:
+        print(f"Error displaying URL: {e}")
+        if chrome_process and chrome_process.poll() is None:
+            chrome_process.terminate()
+    
+    chrome_process = None
     return
 
 def Timing():
@@ -88,18 +157,57 @@ def Main():
         Timing()
         url = URLS[day_of_week]
         print("URL: " + url)
-        #Show diplay until next update time - 6AM, 12PM, 6PM, 12AM
+        #Show display until next update time - 6AM, 12PM, 6PM, 12AM
         DisplayURL(url, CalculateSleepTime()+70)    #In case of a delay, add 70 seconds insuring midnight update is on next day
 
-
-__name__ = "__main__"
-debug = 0
-if debug > 0:
+def TestAllDays():
+    """Test mode - quickly cycle through all 7 days of the week"""
+    global day_of_week, URLS
+    
+    print("=== TEST MODE: Cycling through all 7 days ===")
+    day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    
     for tmp_day in range(0, 7):
         day_of_week = tmp_day
+        print(f"\n--- Testing Day {tmp_day + 1}/7: {day_names[tmp_day]} ---")
         Timing()
-        DisplayURL(URLS[tmp_day],5)
-print("starting main")
-Main()
-print("Will never get here.... Main is an infinite loop")
+        DisplayURL(URLS[tmp_day], 10)  # Display each page for 10 seconds
+        print(f"Completed {day_names[tmp_day]}")
+    
+    print("\n=== TEST MODE COMPLETE: All 7 days tested ===")
+    return
+
+def cleanup(signum, frame):
+    """Cleanup function to close Chrome on exit"""
+    global chrome_process
+    print("\nReceived signal to exit. Cleaning up...")
+    if chrome_process and chrome_process.poll() is None:
+        chrome_process.terminate()
+        chrome_process.wait()
+    exit(0)
+
+if __name__ == "__main__":
+    # Register signal handlers for clean shutdown
+    signal.signal(signal.SIGINT, cleanup)
+    signal.signal(signal.SIGTERM, cleanup)
+    
+    #degug mode - set to >0 to enable debug prints
+    debug = 0  # Change to >0 to enable debug prints
+
+    # Test mode - set to 1 to quickly test all 7 days
+    test_mode = 1  # Change to 1 to enable test mode
+    
+    if test_mode > 0:
+        TestAllDays()
+        print("Exiting after test mode")
+        exit(0)
+    
+    if debug > 0:
+        for tmp_day in range(0, 7):
+            day_of_week = tmp_day
+            Timing()
+            DisplayURL(URLS[tmp_day], 5)
+    print("starting main")
+    Main()
+    print("Will never get here.... Main is an infinite loop")
 

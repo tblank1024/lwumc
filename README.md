@@ -1,63 +1,156 @@
-# Daily Announcment Display for Raspberry Pi4B to TV (lwumc)
-Lake Washington United Methodist Church (Kirkland, WA) 
+# Lake Washington United Methodist Church (LWUMC) Daily Calendar Display
 
-## General Description
-Using a Raspberry Pi 4B, this program will continuously display a daily messsage 
-to a chromium window in full screen mode using F11. Seven urls, one for each day are required. 
-The display is refreshed every 6 hours starting at midnight in case announcement
-changes are made. Finally, the system starts automatically at boot. The system can run
-without a keyboard or mouse.
+Python program that displays the daily calendar for Lake Washington United Methodist Church on a TV monitor connected to a Raspberry Pi.
 
-## System Setup
-The following provides the steps to get the system working:
-1. Build a Raspberry Pi OS image (updated to Bookworm 64 bit) with Python (I used Python 3.11.2)
-2. Connect to internet either through ethernet or wifi
-3. In cmd window: cd to location where you'd like the code to live
-4. In cmd window: git clone https://github.com/tblank1024/lwumc.git
-5. In cmd window: 
-    sudo apt update
-    sudo apt install python3-pip -y
-    sudo python3 -m pip install --upgrade pip
-    sudo pip3 install -r /path/to/requirements.txt
+## Features
 
-6. Using rasp-config:
-- select boot to desktop
-- select autologin
-- (optional) VNC is enabled (see maintenance section)
-8. Modify daily.py code to point at your 7 urls, one for each day. 
-9. Create and start a systemd service to run the code (see systemd section for steps)
-10. Reboot system and the program should start
+- Displays the daily calendar in full-screen kiosk mode
+- Updates automatically at 6AM, 12PM, 6PM, and 12AM
+- Runs continuously and restarts on failure
+- Autostart on system boot using systemd
 
-## systemd service Setup
-1. Create file: /etc/systemd/system/announcments.service
-2. Code for file:
-```
-[Unit]
-Description=Python Program using Chromium to display daily announements/schedule items
+## Requirements
 
-[Service]
-ExecStart=/usr/bin/python3 /home/tblank2/code/tblank1024/lwumc/src/daily.py
-Restart=always
-User=announce
-Environment=DISPLAY=:0
+- Raspberry Pi (tested on Raspberry Pi 4B)
+- Raspbian/Raspberry Pi OS with desktop environment
+- Python 3 (built-in, no additional packages required)
+- Chromium browser
 
-[Install]
-WantedBy=multi-user.target
+## Installation
+
+### 1. Install Chromium Browser (if not already installed)
+
+```bash
+sudo apt-get update
+sudo apt-get install chromium-browser
 ```
 
-3. Modify the ExecStart line to point to the location of the daily.py file
-4. Modify the User line to the name of the user you want to run the code
-5. In cmd window: sudo systemctl enable announcements.service
-6. In cmd window: sudo systemctl start  announcements.service
+### 2. Clone the Repository
 
-## Security
-Setting up the systemd service and installing python packages requires super user access using sudo.  
-I was uncomfortable leaving the system continuously logged in with super user privilages so after setting everything 
-up, using another account, I removed my selected account from the sudo group. Other security measures can be taken if
-the system isn't in a secure location like disabling any unsed ports.  
+```bash
+cd ~
+git clone https://github.com/tblank1024/lwumc.git
+cd lwumc
+```
 
-##  Maintenance
-The the system does not have a keyboard or mouse. VNC provides remote access when/if changes need to be made.  However, 
-typical operation should not require any changes since only the 7 pages with daily announcements need to be modified; the urls
-shouldn't be changed. Finally, I discovered that xrdp and the windows "remote desktop" didn't work properly; 
-only RealVNC desktop worked with both a remote display and a display directly connected to the Pi.
+### 3. Install the Systemd Service (Autostart on Boot)
+
+```bash
+chmod +x install-service.sh
+sudo ./install-service.sh
+```
+
+This will:
+- Copy the service file to `/etc/systemd/system/`
+- Enable the service to start automatically on boot
+- Configure the service to restart on failure
+
+### 4. Start the Service
+
+```bash
+sudo systemctl start lwumc-calendar
+```
+
+## Usage
+
+### Service Management
+
+```bash
+# Check service status
+sudo systemctl status lwumc-calendar
+
+# Start the service
+sudo systemctl start lwumc-calendar
+
+# Stop the service
+sudo systemctl stop lwumc-calendar
+
+# Restart the service
+sudo systemctl restart lwumc-calendar
+
+# View live logs
+sudo journalctl -u lwumc-calendar -f
+
+# Disable autostart on boot
+sudo systemctl disable lwumc-calendar
+
+# Enable autostart on boot
+sudo systemctl enable lwumc-calendar
+```
+
+### Manual Testing
+
+To run the program manually for testing:
+
+```bash
+cd ~/lwumc/src
+python3 daily.py
+```
+
+**Note:** The program has a test mode enabled by default. Edit `daily.py` and set `test_mode = 0` to run in production mode.
+
+## Configuration
+
+### Test Mode
+
+In `src/daily.py`, you can configure:
+
+```python
+# Test mode - cycles through all 7 days quickly (10 seconds each)
+test_mode = 1  # Set to 0 for production mode
+
+# Debug mode - enables detailed logging
+debug = 0  # Set to >0 to enable debug prints
+```
+
+### Calendar URLs
+
+The URLs for each day of the week are defined in the `URLS` array in `daily.py`.
+
+## Troubleshooting
+
+### Service won't start
+
+1. Check the logs: `sudo journalctl -u lwumc-calendar -e`
+2. Verify Chromium is installed: `which chromium-browser`
+3. Check the DISPLAY variable: `echo $DISPLAY`
+
+### Chrome/Chromium not found
+
+Install the browser:
+```bash
+sudo apt-get install chromium-browser
+```
+
+### Display issues
+
+Make sure you're running the service as the user who is logged into the desktop environment. The service file is configured for user `lwumcroot` by default.
+
+### Disable test mode
+
+Edit `src/daily.py` and change:
+```python
+test_mode = 0  # Disable test mode for production
+```
+
+Then restart the service:
+```bash
+sudo systemctl restart lwumc-calendar
+```
+
+## Development
+
+The program uses only Python standard library modules:
+- `subprocess` - For launching Chromium browser
+- `time` - For sleep delays
+- `datetime` - For time calculations
+- `signal` - For clean shutdown handling
+- `os` - For environment variables
+
+## License
+
+See LICENSE file for details.
+
+## Source
+
+Maintained at: https://github.com/tblank1024/lwumc.git
