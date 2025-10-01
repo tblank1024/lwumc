@@ -10,11 +10,16 @@ without a keyboard or mouse.
 
 ## System Setup
 The following provides the steps to get the system working:
-1. Build a Raspberry Pi OS image with Python (I used Python 3.11)
+1. Build a Raspberry Pi OS image (updated to Bookworm 64 bit) with Python (I used Python 3.11.2)
 2. Connect to internet either through ethernet or wifi
 3. In cmd window: cd to location where you'd like the code to live
 4. In cmd window: git clone https://github.com/tblank1024/lwumc.git
-5. In cmd window: python -m pip install -r requirements.txt5. 
+5. In cmd window: 
+    sudo apt update
+    sudo apt install python3-pip -y
+    sudo python3 -m pip install --upgrade pip
+    sudo pip3 install -r /path/to/requirements.txt
+
 6. Using rasp-config:
 - select boot to desktop
 - select autologin
