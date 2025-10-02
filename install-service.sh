@@ -252,6 +252,24 @@ else
         echo ""
         exit 1
     fi
+    
+    # Get the user's home directory
+    USER_HOME=$(eval echo ~$SERVICE_USER)
+    
+    # Copy/update files to user's home directory
+    echo ""
+    if [ -d "$USER_HOME/lwumc" ]; then
+        echo "Updating application files in $USER_HOME/lwumc..."
+    else
+        echo "Copying application files to $USER_HOME/lwumc..."
+        mkdir -p "$USER_HOME/lwumc"
+    fi
+    
+    cp -r "$SCRIPT_DIR"/* "$USER_HOME/lwumc/"
+    chown -R "$SERVICE_USER:$SERVICE_USER" "$USER_HOME/lwumc"
+    echo "✓ Files synchronized to: $USER_HOME/lwumc"
+    
+    SCRIPT_DIR="$USER_HOME/lwumc"
 fi
 
 # Ask about auto-login configuration
