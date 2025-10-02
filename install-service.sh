@@ -48,16 +48,20 @@ configure_autologin() {
         # LightDM configuration
         echo "Detected LightDM display manager"
         
-        # Backup existing config
+        # Backup existing config (only if backup doesn't exist)
         if [ ! -f /etc/lightdm/lightdm.conf.backup ]; then
             cp /etc/lightdm/lightdm.conf /etc/lightdm/lightdm.conf.backup
         fi
         
+        # Remove any existing autologin configuration to avoid duplicates
+        sed -i '/^autologin-user=/d' /etc/lightdm/lightdm.conf
+        sed -i '/^autologin-user-timeout=/d' /etc/lightdm/lightdm.conf
+        
         # Configure auto-login
         if grep -q "^\[Seat:\*\]" /etc/lightdm/lightdm.conf; then
-            # Modify existing [Seat:*] section
-            sed -i "/^\[Seat:\*\]/a autologin-user=$username" /etc/lightdm/lightdm.conf
+            # Add autologin settings after [Seat:*] section
             sed -i "/^\[Seat:\*\]/a autologin-user-timeout=0" /etc/lightdm/lightdm.conf
+            sed -i "/^\[Seat:\*\]/a autologin-user=$username" /etc/lightdm/lightdm.conf
         else
             # Add new [Seat:*] section
             echo "" >> /etc/lightdm/lightdm.conf
@@ -76,28 +80,34 @@ configure_autologin() {
         
         # Also modify the user in the auto-login config
         if [ -f /etc/systemd/system/getty@tty1.service.d/autologin.conf ]; then
-            sed -i "s/ExecStart=.*/ExecStart=-\/sbin\/agetty --autologin $username --noclear %I \$TERM/" /etc/systemd/system/getty@tty1.service.d/autologin.conf
+            # Update existing autologin configuration
+            sed -i "s/--autologin [^ ]*/--autologin $username/" /etc/systemd/system/getty@tty1.service.d/autologin.conf
         fi
         
     elif systemctl list-unit-files | grep -q "gdm"; then
         # GDM (GNOME Display Manager)
         echo "Detected GDM display manager"
         
-        # Backup existing config
+        # Backup existing config (only if backup doesn't exist)
         if [ ! -f /etc/gdm3/custom.conf.backup ]; then
             cp /etc/gdm3/custom.conf /etc/gdm3/custom.conf.backup 2>/dev/null || true
         fi
         
-        # Configure auto-login in GDM
+        # Remove existing autologin settings to avoid duplicates
         if [ -f /etc/gdm3/custom.conf ]; then
-            sed -i "/\[daemon\]/a AutomaticLoginEnable=true" /etc/gdm3/custom.conf
+            sed -i '/^AutomaticLoginEnable=/d' /etc/gdm3/custom.conf
+            sed -i '/^AutomaticLogin=/d' /etc/gdm3/custom.conf
+            
+            # Add autologin settings after [daemon] section
             sed -i "/\[daemon\]/a AutomaticLogin=$username" /etc/gdm3/custom.conf
+            sed -i "/\[daemon\]/a AutomaticLoginEnable=true" /etc/gdm3/custom.conf
         fi
         
     elif [ -d /etc/sddm.conf.d ]; then
         # SDDM (Simple Desktop Display Manager - used by KDE)
         echo "Detected SDDM display manager"
         
+        # Overwrite autologin config (idempotent - always creates fresh config)
         cat > /etc/sddm.conf.d/autologin.conf << EOF
 [Autologin]
 User=$username
@@ -326,6 +336,31 @@ if ! command -v chromium-browser &> /dev/null && ! command -v google-chrome &> /
     else
         echo "Skipping Chromium installation."
         echo "You can install it later with: sudo apt-get install chromium-browser"
+    fi
+fi
+
+# Check if unclutter is installed (for hiding cursor)
+if ! command -v unclutter &> /dev/null; then
+    echo ""
+    echo "INFO: unclutter not found (used to hide mouse cursor on display)"
+    read -p "Do you want to install unclutter now? (Y/n): " INSTALL_UNCLUTTER
+    INSTALL_UNCLUTTER=${INSTALL_UNCLUTTER:-Y}
+    
+    if [[ "$INSTALL_UNCLUTTER" =~ ^[Yy]$ ]]; then
+        echo "Installing unclutter..."
+        apt-get install -y unclutter
+        
+        if [ $? -eq 0 ]; then
+            echo "✓ unclutter installed successfully!"
+        else
+            echo "WARNING: Failed to install unclutter"
+            echo "The display will work but the cursor may be visible"
+            echo "You can install it manually later with: sudo apt-get install unclutter"
+        fi
+    else
+        echo "Skipping unclutter installation."
+        echo "Note: Mouse cursor will be visible on the display"
+        echo "You can install it later with: sudo apt-get install unclutter"
     fi
 fi
 

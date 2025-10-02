@@ -12,6 +12,7 @@ import time
 from datetime import datetime
 import signal
 import os
+import sys
 
 #Constants
 URLS =     ["https://lakewaumc.org/event-calendar-page-monday/",
@@ -29,6 +30,41 @@ minute_of_hour = 0
 debug = 0
 test_mode = 0  # Set to 1 to quickly test all 7 days
 chrome_process = None
+unclutter_process = None
+
+def hide_cursor():
+    """Hide the mouse cursor using unclutter or xdotool"""
+    global unclutter_process
+    
+    try:
+        # Try using unclutter (preferred method)
+        unclutter_process = subprocess.Popen(['unclutter', '-idle', '0', '-root'],
+                                             stdout=subprocess.DEVNULL,
+                                             stderr=subprocess.DEVNULL)
+        print("Cursor hidden using unclutter")
+        return True
+    except FileNotFoundError:
+        try:
+            # Alternative: use xdotool to move cursor off-screen
+            subprocess.run(['xdotool', 'mousemove', '9999', '9999'],
+                          stdout=subprocess.DEVNULL,
+                          stderr=subprocess.DEVNULL,
+                          check=True)
+            print("Cursor moved off-screen using xdotool")
+            return True
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            print("Warning: Could not hide cursor (unclutter or xdotool not found)")
+            print("Install with: sudo apt-get install unclutter")
+            return False
+
+def show_cursor():
+    """Show the mouse cursor by stopping unclutter"""
+    global unclutter_process
+    
+    if unclutter_process and unclutter_process.poll() is None:
+        unclutter_process.terminate()
+        unclutter_process.wait()
+        print("Cursor restored")
 
 def DisplayURL(url, Sleeping_sec):
     global chrome_process
@@ -178,18 +214,22 @@ def TestAllDays():
     return
 
 def cleanup(signum, frame):
-    """Cleanup function to close Chrome on exit"""
+    """Cleanup function to close Chrome and restore cursor on exit"""
     global chrome_process
     print("\nReceived signal to exit. Cleaning up...")
     if chrome_process and chrome_process.poll() is None:
         chrome_process.terminate()
         chrome_process.wait()
+    show_cursor()
     exit(0)
 
 if __name__ == "__main__":
     # Register signal handlers for clean shutdown
     signal.signal(signal.SIGINT, cleanup)
     signal.signal(signal.SIGTERM, cleanup)
+    
+    # Hide the mouse cursor
+    hide_cursor()
     
     #degug mode - set to >0 to enable debug prints
     debug = 0  # Change to >0 to enable debug prints
@@ -200,6 +240,7 @@ if __name__ == "__main__":
     if test_mode > 0:
         TestAllDays()
         print("Exiting after test mode")
+        show_cursor()
         exit(0)
     
     if debug > 0:
