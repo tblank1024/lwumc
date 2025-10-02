@@ -195,7 +195,7 @@ if __name__ == "__main__":
     debug = 0  # Change to >0 to enable debug prints
 
     # Test mode - set to 1 to quickly test all 7 days
-    test_mode = 1  # Change to 1 to enable test mode
+    test_mode = 0  # Change to 1 to enable test mode
     
     if test_mode > 0:
         TestAllDays()
